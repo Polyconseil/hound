@@ -1,20 +1,24 @@
 FROM alpine
 
-ENV GOPATH /go
-
-COPY . /go/src/github.com/etsy/hound
-
-COPY default-config.json /data/config.json
-
-RUN apk update \
-	&& apk add go git subversion libc-dev mercurial bzr openssh \
-	&& go install github.com/etsy/hound/cmds/houndd \
-	&& apk del go \
-	&& rm -f /var/cache/apk/* \
-	&& rm -rf /go/src /go/pkg
-
-VOLUME ["/data"]
+ENV GOPATH /home/hound
 
 EXPOSE 6080
 
-ENTRYPOINT ["/go/bin/houndd", "-conf", "/data/config.json"]
+RUN apk update \
+	&& apk add go git openssh \
+	&& rm -f /var/cache/apk/*
+
+RUN adduser -u 998 -D hound
+
+COPY . /home/hound/src/github.com/etsy/hound
+
+RUN chown -R hound:hound /home/hound
+
+VOLUME ["/home/hound]
+
+USER hound
+
+RUN go install github.com/etsy/hound/cmds/houndd \
+	&& rm -rf /home/hound/src /home/hound/pkg
+
+ENTRYPOINT ["/go/bin/houndd", "-conf", "/home/hound/data/config.json"]
